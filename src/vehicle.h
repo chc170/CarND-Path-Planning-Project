@@ -1,20 +1,19 @@
 #ifndef VEHICLE_H
 #define VEHICLE_H
 
+#include <vector>
 #include "utils.h"
 
+using namespace std;
 
 class Vehicle
 {
     public:
         Vehicle();
-        Vhiecle(double s, double d, double v);
+        Vehicle(double s, double d, double v);
+        void update(double s, double d, double v);
 
-        // get current state
-
-        // get previous path
-
-        vector<vector<double>> buildTrajectory();
+        //vector<vector<double>> buildTrajectory();
 
     private:
         int lane;

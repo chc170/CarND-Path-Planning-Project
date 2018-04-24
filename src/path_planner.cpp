@@ -1,12 +1,15 @@
 #include "path_planner.h"
 
 
+const double DELTA_V = .224; // 5 meter / sec
+const double MAX_V = 50;     // mile / hr
+const double MIN_V = 0;
+const int DIST_THRESHOLD = 30;
+
+using namespace std;
 
 PathPlanner::PathPlanner()
 {
-    // initialize current state
-    max_s = 6945.554;
-
     // start in middle lane
     lane = 1;
 
@@ -19,74 +22,91 @@ PathPlanner::PathPlanner()
  */
 void PathPlanner::updateTrajectory(
             VehicleState vState,
-            vector<double> previous_path_x, vector<double> previous_path_y,
+            vector<double> prev_path_x, vector<double> prev_path_y,
             vector<double> &next_path_x, vector<double> &next_path_y,
             double end_path_s, double end_path_d,
             const vector<vector<double>> &sensor_fusion)
 {
-
-
-
-    // current other car states and trajectories - sensor fusion
+    int prev_size = prev_path_x.size();
+    double car_s = end_path_s;
 
     // current ego state and multiple possible trajectories
+    vector<double>* best_path_x;
+    vector<double>* best_path_y;
+    VehicleState* best_state;
+    VehicleState* state;
+    double best_v = ref_v;
+    int best_cost = std::numeric_limits<int>::max();
+    int cost;
 
-    // evaluate trajectories with costs
+    int start_l = max(0, lane-1);
+    int end_l = min(2, lane+1);
+    for (int l=start_l; l <= end_l; l++) {
+        double start_v = max(MIN_V, ref_v-DELTA_V);
+        double end_v = min(MAX_V, ref_v+DELTA_V);
+        for (double v = start_v; v <= end_v; v += DELTA_V) {
+            if (v <= 0) { continue; }
+            cost = 0;
+            // create possible state
+            state = new VehicleState();
+			state->x = vState.x;
+            state->y = vState.y;
+            state->s = vState.s;
+            state->d = vState.d;
+            state->yaw = vState.yaw;
+            state->speed = v;
+            state->lane = l;
 
-    // update FSM state
+            // create possible path
+            vector<double> possible_path_x;
+            vector<double> possible_path_y;
+            buildTrajectory(*state,
+                            prev_path_x, prev_path_y,
+                            possible_path_x, possible_path_y,
+                            end_path_s, end_path_d);
 
-            //////////////////////////////////////////////////////////////////////////////
-            // get size of the path from preivous path
-            int prev_size = previous_path_x.size();
+            // evaluate trajectory with other cars
+            for (const auto& other : sensor_fusion) {
+                // car is in my target lane
+                float d = other[6];
+                if (d < (2+4*l+2) && d > (2+4*l-2)) {
+                    double vx = other[3];
+                    double vy = other[4];
 
-            // utilize sensor fusion data to prevent collision
-            if (prev_size > 0) {
-                car_s = end_path_s;
-            }
-            bool too_close = false;
-
-            // find ref_v to use
-            for (int i = 0; i < sensor_fusion.size(); i++)
-            {
-                // car is in my lane
-                float d = sensor_fusion[i][6];
-                if (d < (2+4*lane+2) && d > (2+4*lane-2))
-                {
-                    // (id,x,y,vx,vy,s,d)
-                    double vx = sensor_fusion[i][3];
-                    double vy = sensor_fusion[i][4];
-
-                    double check_speed = sqrt(vx*vx+vy*vy);
-                    double check_car_s = sensor_fusion[i][5];
-
-                    // use previous points to project s value outward
-                    check_car_s += ((double)prev_size * .02 * check_speed);
-                    //
-                    if ((check_car_s > car_s) && ((check_car_s-car_s) < 30))
-                    {
-                        too_close = true;
+                    double cur_s = sqrt(vx*vx+vy*vy);
+                    double proj_s = other[5] +
+                                        ((double)prev_size * .02 * cur_s);
+                    if ((proj_s > car_s) && ((proj_s-car_s) < DIST_THRESHOLD)) {
+                        cost += 1000 * (proj_s-car_s);
                     }
                 }
             }
-
-            if (too_close)
-            {
-                ref_vel -= .224; // 5 meter/sec
+            if (cost > 1000) {
+                cost += v * 100;
+            } else {
+			    cost += (MAX_V - v) * 100;
             }
-            else if (ref_vel < 49.5)
-            {
-                ref_vel += .224;
+			if (l != lane) {cout << "change lane ";  cost += 50; }
+			cout << "Option lane: " << l << " speed: " << v << " cost: " << cost << endl;
+            if (cost < best_cost) {
+				best_cost = cost;
+                best_state = state;
             }
+        }
+    }
+    cout << "Cost: " << best_cost << endl;
+    cout << "REF V: " << ref_v << endl;
+    cout << "START SPEED: " << max(MIN_V, ref_v-DELTA_V) << endl;
+    cout << "END SPEED: " << min(MAX_V, ref_v+DELTA_V) << endl;
+    cout << "SPEED: " << best_v << endl;
+    cout << "LANE: " << best_state->lane << endl;
 
-            // Prediction
-
-            // Behavior
-
-            buildTrajectory(vState,
-                    previous_path_x, previous_path_y,
-                    end_path_s, end_path_d,
-                    next_path_x, next_path_y);
-
+	ref_v = best_state->speed;
+	lane = best_state->lane;
+    buildTrajectory(*best_state,
+					prev_path_x, prev_path_y,
+                    next_path_x, next_path_y,
+                    end_path_s, end_path_d);
 }
 
 /**
@@ -144,7 +164,7 @@ void PathPlanner::buildTrajectory(const VehicleState &vState,
 
     for (int delta = 30; delta < 100; delta += 30)
     {
-        vector<double> next_wp = wp.getXY(car_s + delta, (2+4*lane));
+        vector<double> next_wp = wp.getXY(car_s + delta, (2+4*vState.lane));
         ptsx.push_back(next_wp[0]);
         ptsy.push_back(next_wp[1]);
     }
@@ -184,7 +204,7 @@ void PathPlanner::buildTrajectory(const VehicleState &vState,
     for (int i = 1; i <= 50 - prev_size; i++)
     {
         // N * .02 * vel = dist
-        double N = (target_dist / (.02*ref_v/2.24)); // mile/hour -> meter/sec
+        double N = (target_dist / (.02*vState.speed/2.24)); // mile/hour -> meter/sec
         double x_point = x_add_on + target_x/N;
         double y_point = s(x_point);
 
@@ -203,5 +223,4 @@ void PathPlanner::buildTrajectory(const VehicleState &vState,
         t_x.push_back(x_point);
         t_y.push_back(y_point);
     }
-
 }

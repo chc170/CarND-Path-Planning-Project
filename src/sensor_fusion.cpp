@@ -7,7 +7,7 @@ SensorFusion::SensorFusion()
 void SensorFusion::update(const vector<vector<double>> &sensor_fusion)
 {
     // initialize the flags
-    unordered_set<int, bool> existingVechicles;
+    unordered_map<int, bool> existingVehicles;
     for (auto &v : otherVehicles)
     {
         existingVehicles[v.first] = false;
@@ -25,35 +25,35 @@ void SensorFusion::update(const vector<vector<double>> &sensor_fusion)
         double s  = data[5];
         double d  = data[6];
 
-        auto v = otherVehicles.find(id);
-        if (v == otherVehicles.end())
+        auto vehicle = otherVehicles.find(id);
+        if (vehicle == otherVehicles.end())
         {
             otherVehicles[id] = Vehicle(s, d, v);
         }
         else
         {
             otherVehicles[id].update(s, d, v);
-            existingVehicle[id] = true;
+            existingVehicles[id] = true;
         }
     }
 
     // remove vehicles that are lost track
-    for (auto &v : existingVehicles)
+    for (auto &vehicle : existingVehicles)
     {
-        if (!v.second)
+        if (!vehicle.second)
         {
-            otherVehicles.erase(v.first);
+            otherVehicles.erase(vehicle.first);
         }
     }
 }
 
-vector<vector<vector<double>>> SensorFusion::getTrajectories()
-{
-    vector<vector<vector<double>>> trajectories;
-    for (auto &v : otherVehicles)
-    {
-        trajectories.push_back(v.buildTrajectory());
-    }
-
-    return trajectories;
-}
+//vector<vector<vector<double>>> SensorFusion::getTrajectories()
+//{
+//    vector<vector<vector<double>>> trajectories;
+//    for (auto &v : otherVehicles)
+//    {
+//        trajectories.push_back(v.buildTrajectory());
+//    }
+//
+//    return trajectories;
+//}

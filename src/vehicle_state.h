@@ -10,6 +10,8 @@ struct VehicleState
     double d;
     double yaw;
     double speed;
+
+    int lane;
 };
 
 #endif // VEHICLE_STATE_H

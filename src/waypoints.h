@@ -1,6 +1,15 @@
 #ifndef WAYPOINTS_H
 #define WAYPOINTS_H
 
+#include "utils.h"
+#include <math.h>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+
+using namespace std;
+
 class Waypoints
 {
 
@@ -11,7 +20,7 @@ class Waypoints
         int getNextWaypoint(double x, double y, double theta);
 
         vector<double> getFrenet(double x, double y, double theta);
-        vector<double getXY(double s, double d);
+        vector<double> getXY(double s, double d);
 
     private:
         vector<double> map_waypoints_x;

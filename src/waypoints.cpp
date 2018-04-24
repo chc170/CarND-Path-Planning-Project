@@ -1,11 +1,9 @@
 #include "waypoints.h"
-#include "utils.h"
-
 
 Waypoints::Waypoints()
 {
     string map_file = "../data/highway_map.csv";
-    ifstream in_map_(map_file_.c_str(), ifstream::in);
+    ifstream in_map_(map_file.c_str(), ifstream::in);
 
     string line;
     while (getline(in_map_, line)) {
@@ -27,7 +25,7 @@ Waypoints::Waypoints()
     }
 }
 
-int getClosestWaypoint(double x, double y)
+int Waypoints::getClosestWaypoint(double x, double y)
 {
     double closestLen = 100000; // a larget number
     int closestWaypoint = 0;
@@ -45,14 +43,14 @@ int getClosestWaypoint(double x, double y)
         }
     }
 
-    return clossestWaypoint;
+    return closestWaypoint;
 }
 
-int getNextWaypoint(double x, double y, double theta)
+int Waypoints::getNextWaypoint(double x, double y, double theta)
 {
-    int closestWaypint = getClosestWaypoint(x, y);
+    int closestWaypoint = getClosestWaypoint(x, y);
 
-    double map_x = map_waypionts_x[closestWaypoint];
+    double map_x = map_waypoints_x[closestWaypoint];
     double map_y = map_waypoints_y[closestWaypoint];
 
     double heading = atan2((map_y-y), (map_x-x));
@@ -62,8 +60,8 @@ int getNextWaypoint(double x, double y, double theta)
 
     if (angle > M_PI/4)
     {
-        closestWaypint++;
-        if (closestWaypoint == map_waypints_x.size())
+        closestWaypoint++;
+        if (closestWaypoint == map_waypoints_x.size())
         {
             closestWaypoint = 0;
         }
@@ -75,13 +73,13 @@ int getNextWaypoint(double x, double y, double theta)
 /**
  * Transform from Cartesian x, y coordinates to Frenet s, d coordinataes
  */
-vector<double> getFrenet(double x, double y, double theta)
+vector<double> Waypoints::getFrenet(double x, double y, double theta)
 {
     int next_wp = getNextWaypoint(x, y, theta);
-    int prev_wp = (next_wp > 0) ? next_wp - 1 : map_waypints_x.size() - 1 ;
+    int prev_wp = (next_wp > 0) ? next_wp - 1 : map_waypoints_x.size() - 1 ;
 
     double n_x = map_waypoints_x[next_wp] - map_waypoints_x[prev_wp];
-    double n_y = map_waypoints_y[next_wp] - map_waypionts_y[prev_wp];
+    double n_y = map_waypoints_y[next_wp] - map_waypoints_y[prev_wp];
 
     double x_x = x - map_waypoints_x[prev_wp];
     double x_y = y - map_waypoints_y[prev_wp];
@@ -108,7 +106,7 @@ vector<double> getFrenet(double x, double y, double theta)
     double frenet_s = 0;
     for (int i = 0; i < prev_wp; i++)
     {
-        frenet_s += Utils::distance(map_waypoints_x[i]. map_waypoints_y[i],
+        frenet_s += Utils::distance(map_waypoints_x[i], map_waypoints_y[i],
                                     map_waypoints_x[i+1], map_waypoints_y[i+1]);
     }
     frenet_s += Utils::distance(0, 0, proj_x, proj_y);
@@ -119,11 +117,11 @@ vector<double> getFrenet(double x, double y, double theta)
 /**
  * Transform from Frenet s, d coordinates to Cartesian x, y
  */
-vector<double> getXY(double s, double d)
+vector<double> Waypoints::getXY(double s, double d)
 {
     int prev_wp = -1;
 
-    while((s > map_waypoings_s[prev_wp+1]) &&
+    while((s > map_waypoints_s[prev_wp+1]) &&
           (prev_wp < (int)(map_waypoints_s.size()-1)))
     {
         prev_wp++;

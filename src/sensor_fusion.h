@@ -1,6 +1,11 @@
 #ifndef SENSOR_FUSION_H
 #define SENSOR_FUSION_H
 
+#include "vehicle.h"
+#include "waypoints.h"
+#include <vector>
+#include <unordered_map>
+
 using namespace std;
 
 class SensorFusion
@@ -10,7 +15,7 @@ class SensorFusion
 
         void update(const vector<vector<double>> &sensor_fusion);
 
-        vector<vector<vector<double>>> getTrajectories();
+        //vector<vector<vector<double>>> getTrajectories();
 
     private:
         Waypoints wp;
