@@ -1,6 +1,6 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
-   
+
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
 
@@ -38,13 +38,13 @@ Here is the data provided from the Simulator to the C++ Program
 #### Previous path data given to the Planner
 
 //Note: Return the previous list but with processed points removed, can be a nice tool to show how far along
-the path has processed since last time. 
+the path has processed since last time.
 
 ["previous_path_x"] The previous list of x points previously given to the simulator
 
 ["previous_path_y"] The previous list of y points previously given to the simulator
 
-#### Previous path's end s and d values 
+#### Previous path's end s and d values
 
 ["end_path_s"] The previous list's last point's frenet s value
 
@@ -52,7 +52,7 @@ the path has processed since last time.
 
 #### Sensor Fusion Data, a list of all other car's attributes on the same side of the road. (No Noise)
 
-["sensor_fusion"] A 2d vector of cars and then that car's [car's unique ID, car's x position in map coordinates, car's y position in map coordinates, car's x velocity in m/s, car's y velocity in m/s, car's s position in frenet coordinates, car's d position in frenet coordinates. 
+["sensor_fusion"] A 2d vector of cars and then that car's [car's unique ID, car's x position in map coordinates, car's y position in map coordinates, car's x velocity in m/s, car's y velocity in m/s, car's s position in frenet coordinates, car's d position in frenet coordinates.
 
 ## Details
 
@@ -82,7 +82,7 @@ A really helpful resource for doing this project and creating smooth trajectorie
   * Run either `install-mac.sh` or `install-ubuntu.sh`.
   * If you install from source, checkout to commit `e94b6e1`, i.e.
     ```
-    git clone https://github.com/uWebSockets/uWebSockets 
+    git clone https://github.com/uWebSockets/uWebSockets
     cd uWebSockets
     git checkout e94b6e1
     ```
@@ -137,4 +137,46 @@ still be compilable with cmake and make./
 
 ## How to write a README
 A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+
+## Reflection
+
+To untangle the slightly complicated system, the code is broken into 4 parts: path planner, sensor fusion, vehicle and waypoints. Each part is responsible for an important feature described in the following section.
+
+### Vehicle and Vehicle State
+Vehicle state is used to store the state of our own vehicle including x, y, s, d, yaw, speed while vehicle class is used to track state of other vehicles with fewer information (s, d, v, lane). These are important data structures containing vehicle information that will be used by path planner to generate possible trajectory.
+
+### Waypoints
+Waypoint class loads points from the map data when initialized. It takes care of all the road point projections.
+
+### Sensor Fusion
+Sensor fusion object holds a list of vehicle objects and keeps tracking the stat of visible vehicles.
+
+### Path Planner
+Path planner is the main role to generate possible trajectory using spline based on different speed and different lanes. After generating all the possible trajectories, it also picks one of the trajectory that cost least.
+
+### Cost calculation
+Instead of explicitly using FSM, a simple cost calculation is used to make the decision. We generate 9 possible trajectories and choose one with lowest cost:
+1. Current speed, stay on current lane.
+2. Current speed, switch to the left lane.
+3. Current speed, switch to the right lane.
+4. Speed up 5 meter/sec, stay on current lane.
+5, Speed up 5 meter/sec, switch to the left lane.
+6. Speed up 5 meter/sec, switch to the right lane.
+7. Slow down 5 meter/sec, stay on current lane.
+8. Slow down 5 meter/sec, switch to the left lane.
+9. Slow down 5 meter/sec, switch to the right lane.
+
+If either speed or lane of the possible trajectory is out of bounds, the trajectory should be ignored.
+
+The cost is calculated as follow:
+1. 1000 * 30 / distance to the closest vehicle in the target lane with in 30 units.
+2. If there is a vehicle in 30 units on target lane, we add 10 * velocity to the cost. (Slower when there is danger.)
+   Otherwise, we add 10 * (30 - velocity) to the cost. (Faster when there is no risk.)
+3. Promote stay in current lane if changing lane and staying have the same cost.
+
+### Result and conculsion
+It is easier to use many if/else statements to deal with the situation in the simulator. However, in real world it won't work well. There are also some improvements can be made. Right now, the car keeps accelerate and decelerate when it's blocked by cars. It would be better to keep the same speed as the front car, which means tracking other vehicles' short history states can be very helpful.
+
+![Image](./screenshot.png)
+
 

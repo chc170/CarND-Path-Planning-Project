@@ -13,8 +13,6 @@ class Vehicle
         Vehicle(double s, double d, double v);
         void update(double s, double d, double v);
 
-        //vector<vector<double>> buildTrajectory();
-
     private:
         int lane;
         int s, d, v;

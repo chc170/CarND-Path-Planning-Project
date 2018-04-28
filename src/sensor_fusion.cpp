@@ -46,14 +46,3 @@ void SensorFusion::update(const vector<vector<double>> &sensor_fusion)
         }
     }
 }
-
-//vector<vector<vector<double>>> SensorFusion::getTrajectories()
-//{
-//    vector<vector<vector<double>>> trajectories;
-//    for (auto &v : otherVehicles)
-//    {
-//        trajectories.push_back(v.buildTrajectory());
-//    }
-//
-//    return trajectories;
-//}
