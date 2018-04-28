@@ -2,7 +2,7 @@
 
 
 const double DELTA_V = .224; // 5 meter / sec
-const double MAX_V = 50;     // mile / hr
+const double MAX_V = 49.5;  // mile / hr
 const double MIN_V = 0;
 const int DIST_THRESHOLD = 30;
 
@@ -46,7 +46,7 @@ void PathPlanner::updateTrajectory(
         double end_v = min(MAX_V, ref_v+DELTA_V);
         for (double v = start_v; v <= end_v; v += DELTA_V) {
             if (v <= 0) { continue; }
-            cost = 0;
+
             // create possible state
             state = new VehicleState();
 			state->x = vState.x;
@@ -65,28 +65,41 @@ void PathPlanner::updateTrajectory(
                             possible_path_x, possible_path_y,
                             end_path_s, end_path_d);
 
+            cost = 0.;
+            bool in_current_lane = (l == lane);
+
             // evaluate trajectory with other cars
             for (const auto& other : sensor_fusion) {
-                // car is in my target lane
                 float d = other[6];
-                if (d < (2+4*l+2) && d > (2+4*l-2)) {
+                bool in_target_lane = (d < (2+4*l+2) && d > (2+4*l-2));
+
+                if (in_target_lane) {
                     double vx = other[3];
                     double vy = other[4];
 
                     double cur_s = sqrt(vx*vx+vy*vy);
                     double proj_s = other[5] +
                                         ((double)prev_size * .02 * cur_s);
-                    if ((proj_s > car_s) && ((proj_s-car_s) < DIST_THRESHOLD)) {
-                        cost += 1000 * (proj_s-car_s);
+
+                    double car_dist = abs(proj_s - car_s);
+                    bool too_close = car_dist <= DIST_THRESHOLD;
+
+                    if (too_close && (proj_s > car_s || !in_current_lane)) {
+                        cost = max(double(cost), 1000.0 * DIST_THRESHOLD / abs(proj_s-car_s));
                     }
                 }
             }
-            if (cost > 1000) {
-                cost += v * 100;
+            if (cost) {
+                cost += 10. * v;
             } else {
-			    cost += (MAX_V - v) * 100;
+                cost += 10. * (MAX_V - v);
             }
-			if (l != lane) {cout << "change lane ";  cost += 50; }
+
+            if (!in_current_lane) {
+                cout << "change lane ";
+                cost += 50;
+            }
+
 			cout << "Option lane: " << l << " speed: " << v << " cost: " << cost << endl;
             if (cost < best_cost) {
 				best_cost = cost;
